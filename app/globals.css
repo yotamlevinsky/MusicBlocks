@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --tick-width: 40px;
+}
+
+body {
+  @apply bg-slate-900 text-slate-100;
+}
+
+/* Block glow effect during playback */
+.block-active {
+  @apply ring-4 ring-white/50;
+  box-shadow: 0 0 20px currentColor;
+}
+
+/* Timeline drop zone */
+.timeline-dropzone {
+  @apply min-h-[80px] border-2 border-dashed border-slate-600 rounded-lg;
+  @apply transition-colors duration-200;
+}
+
+.timeline-dropzone.drag-over {
+  @apply border-blue-400 bg-blue-400/10;
+}
+
+/* Playhead animation */
+@keyframes playhead-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.playhead {
+  animation: playhead-pulse 0.5s ease-in-out infinite;
+}
+
+/* Grid background for tick visualization */
+.tick-grid {
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent calc(var(--tick-width) - 1px),
+    rgba(148, 163, 184, 0.2) calc(var(--tick-width) - 1px),
+    rgba(148, 163, 184, 0.2) var(--tick-width)
+  );
+}
