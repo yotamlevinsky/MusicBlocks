@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useSequenceStore } from "@/lib/stores/useSequenceStore";
+import { useCustomBlockStore } from "@/lib/stores/useCustomBlockStore";
 import {
   initAudio,
   scheduleSequence,
@@ -27,6 +28,8 @@ export default function TransportControls() {
     clearBeatSequence,
     clearHarmonySequence,
   } = useSequenceStore();
+
+  const customBlocks = useCustomBlockStore((state) => state.customBlocks);
 
   const isLoopingRef = useRef(isLooping);
   isLoopingRef.current = isLooping;
@@ -57,7 +60,8 @@ export default function TransportControls() {
         },
         tempo,
         isLoopingRef.current,
-        handleLoopRestart
+        handleLoopRestart,
+        customBlocks
       );
 
       play();

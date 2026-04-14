@@ -1,6 +1,6 @@
 "use client";
 
-import { SequenceBlock, DrumType } from "../types";
+import { SequenceBlock, DrumType, CustomBlock } from "../types";
 import { getBlockDefinition, getBeatDefinition, getHarmonyDefinition } from "../blockLibrary";
 
 // Web Audio API based audio engine
@@ -238,8 +238,14 @@ export async function scheduleSequence(
   onComplete: () => void,
   bpm: number = 120,
   isLooping: boolean = false,
-  onLoopRestart?: () => void
+  onLoopRestart?: () => void,
+  customBlocks: CustomBlock[] = []
 ): Promise<void> {
+  // Helper to get block definition from custom or preset blocks
+  const getDefinition = (blockId: string) => {
+    const customBlock = customBlocks.find((b) => b.blockId === blockId);
+    return customBlock || getBlockDefinition(blockId);
+  };
   if (!audioContext) {
     await initAudio();
   }
@@ -266,7 +272,7 @@ export async function scheduleSequence(
   // Calculate total ticks for each sequence
   let melodyTotalTicks = 0;
   melodySequence.forEach((seqBlock) => {
-    const def = getBlockDefinition(seqBlock.blockId);
+    const def = getDefinition(seqBlock.blockId);
     if (def) melodyTotalTicks += def.ticks;
   });
 
@@ -287,7 +293,7 @@ export async function scheduleSequence(
   // Schedule melody notes
   let currentMelodyTick = 0;
   melodySequence.forEach((seqBlock) => {
-    const definition = getBlockDefinition(seqBlock.blockId);
+    const definition = getDefinition(seqBlock.blockId);
     if (!definition) return;
 
     definition.pattern.forEach((noteEvent) => {
@@ -408,17 +414,20 @@ export async function stopPlayback(): Promise<void> {
   }
 }
 
-export function getTotalTicks(sequence: SequenceBlock[], type: "melody" | "beat" | "harmony" = "melody"): number {
+export function getTotalTicks(sequence: SequenceBlock[], type: "melody" | "beat" | "harmony" = "melody", customBlocks: CustomBlock[] = []): number {
   return sequence.reduce((total, seqBlock) => {
     let def;
     if (type === "beat") def = getBeatDefinition(seqBlock.blockId);
     else if (type === "harmony") def = getHarmonyDefinition(seqBlock.blockId);
-    else def = getBlockDefinition(seqBlock.blockId);
+    else {
+      const customBlock = customBlocks.find((b) => b.blockId === seqBlock.blockId);
+      def = customBlock || getBlockDefinition(seqBlock.blockId);
+    }
     return total + (def?.ticks ?? 0);
   }, 0);
 }
 
-export function getBlockStartTick(sequence: SequenceBlock[], instanceId: string, type: "melody" | "beat" | "harmony" = "melody"): number {
+export function getBlockStartTick(sequence: SequenceBlock[], instanceId: string, type: "melody" | "beat" | "harmony" = "melody", customBlocks: CustomBlock[] = []): number {
   let tick = 0;
   for (const block of sequence) {
     if (block.instanceId === instanceId) {
@@ -427,7 +436,10 @@ export function getBlockStartTick(sequence: SequenceBlock[], instanceId: string,
     let def;
     if (type === "beat") def = getBeatDefinition(block.blockId);
     else if (type === "harmony") def = getHarmonyDefinition(block.blockId);
-    else def = getBlockDefinition(block.blockId);
+    else {
+      const customBlock = customBlocks.find((b) => b.blockId === block.blockId);
+      def = customBlock || getBlockDefinition(block.blockId);
+    }
     tick += def?.ticks ?? 0;
   }
   return tick;

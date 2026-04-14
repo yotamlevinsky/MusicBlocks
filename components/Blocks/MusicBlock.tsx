@@ -3,11 +3,13 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { motion } from "framer-motion";
-import { BlockDefinition } from "@/lib/types";
+import { BlockDefinition, CustomBlock } from "@/lib/types";
 import { TICK_WIDTH } from "@/lib/blockLibrary";
+import { renderPixelArtToDataURL } from "@/lib/pixelArt";
+import { useMemo } from "react";
 
 interface MusicBlockProps {
-  definition: BlockDefinition;
+  definition: BlockDefinition | CustomBlock;
   instanceId: string;
   isActive?: boolean;
   onRemove?: () => void;
@@ -30,6 +32,22 @@ export default function MusicBlock({
     id: instanceId,
   });
 
+  // Check if this is a custom block with pixel art
+  const isCustomBlock = (def: BlockDefinition | CustomBlock): def is CustomBlock => {
+    return 'pixelArt' in def;
+  };
+
+  // Generate pixel art DataURL (memoized for performance)
+  const pixelArtDataURL = useMemo(() => {
+    if (isCustomBlock(definition) && definition.pixelArt) {
+      const pixels = typeof definition.pixelArt.pixels === 'string'
+        ? JSON.parse(definition.pixelArt.pixels)
+        : definition.pixelArt.pixels;
+      return renderPixelArtToDataURL(pixels, definition.pixelArt.size);
+    }
+    return null;
+  }, [definition]);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -45,7 +63,16 @@ export default function MusicBlock({
       className="touch-none"
     >
       <motion.div
-        style={{ backgroundColor: definition.color }}
+        style={{
+          backgroundColor: definition.color,
+          ...(pixelArtDataURL && {
+            backgroundImage: `url(${pixelArtDataURL})`,
+            backgroundSize: 'contain',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            imageRendering: 'pixelated',
+          }),
+        }}
         className={`
           group relative h-16 rounded-lg cursor-grab active:cursor-grabbing
           flex items-center justify-center
@@ -62,7 +89,16 @@ export default function MusicBlock({
         whileTap={{ scale: 0.98 }}
         layout
       >
-        <span className="truncate px-2">{definition.name}</span>
+        {!(isCustomBlock(definition) && definition.hideLabel) && (
+          <span
+            className="truncate px-2"
+            style={{
+              textShadow: pixelArtDataURL ? '0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3)' : undefined,
+            }}
+          >
+            {definition.name}
+          </span>
+        )}
 
         {/* Tick markers */}
         <div className="absolute bottom-1 left-0 right-0 flex justify-between px-1">

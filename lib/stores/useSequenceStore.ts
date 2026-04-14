@@ -21,7 +21,7 @@ export const useSequenceStore = create<SequenceStore>((set) => ({
   },
 
   addBlock: (blockId: string) => {
-    if (!getBlockDefinition(blockId)) return;
+    // Allow both preset and custom blocks (validation happens in UI layer)
     set((state) => ({
       sequence: [...state.sequence, { instanceId: uuidv4(), blockId }],
     }));

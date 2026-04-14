@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useId } from "react";
+import { useCallback, useState, useId, useMemo, useEffect } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -18,9 +18,16 @@ import BeatTimeline from "./Canvas/BeatTimeline";
 import HarmonyTimeline from "./Canvas/HarmonyTimeline";
 import TransportControls from "./Controls/TransportControls";
 import ScanButton from "./Controls/ScanButton";
+import BlockEditorModal from "./BlockEditor/BlockEditorModal";
+import BlockLibraryModal from "./BlockEditor/BlockLibraryModal";
 import { useSequenceStore } from "@/lib/stores/useSequenceStore";
+import { useCustomBlockStore } from "@/lib/stores/useCustomBlockStore";
+import { useAppModeStore } from "@/lib/stores/useAppModeStore";
+import { useWorkspaceStore } from "@/lib/stores/useWorkspaceStore";
 import { getBlockDefinition, getBeatDefinition, getHarmonyDefinition, TICK_WIDTH } from "@/lib/blockLibrary";
+import { renderPixelArtToDataURL } from "@/lib/pixelArt";
 import { motion } from "framer-motion";
+import { BlockDefinition, CustomBlock } from "@/lib/types";
 
 export default function Playground() {
   const {
@@ -29,11 +36,33 @@ export default function Playground() {
     addHarmonyBlock, reorderHarmonyBlocks
   } = useSequenceStore();
 
+  const customBlocks = useCustomBlockStore((state) => state.customBlocks);
+  const { mode, toggleMode } = useAppModeStore();
+  const { initializeWorkspace } = useWorkspaceStore();
+
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [dragType, setDragType] = useState<"melody" | "beat" | "harmony" | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+  const [editingBlock, setEditingBlock] = useState<CustomBlock | undefined>(undefined);
 
   const dndContextId = useId();
+
+  // Initialize workspace on mount
+  useEffect(() => {
+    initializeWorkspace();
+  }, [initializeWorkspace]);
+
+  const handleEditBlock = (block: CustomBlock) => {
+    setEditingBlock(block);
+    setIsEditorOpen(true);
+  };
+
+  const handleCloseEditor = () => {
+    setIsEditorOpen(false);
+    setEditingBlock(undefined);
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -129,10 +158,25 @@ export default function Playground() {
     if (!activeBlockId) return null;
     if (dragType === "beat") return getBeatDefinition(activeBlockId);
     if (dragType === "harmony") return getHarmonyDefinition(activeBlockId);
-    return getBlockDefinition(activeBlockId);
+
+    // Check custom blocks first, then preset blocks
+    const customBlock = customBlocks.find((b) => b.blockId === activeBlockId);
+    return customBlock || getBlockDefinition(activeBlockId);
   };
 
   const draggedDefinition = getDraggedDefinition();
+
+  // Generate pixel art for drag overlay if needed
+  const dragOverlayPixelArt = useMemo(() => {
+    const def = draggedDefinition as CustomBlock | BlockDefinition | null;
+    if (def && 'pixelArt' in def && def.pixelArt) {
+      const pixels = typeof def.pixelArt.pixels === 'string'
+        ? JSON.parse(def.pixelArt.pixels)
+        : def.pixelArt.pixels;
+      return renderPixelArtToDataURL(pixels, def.pixelArt.size);
+    }
+    return null;
+  }, [draggedDefinition]);
 
   return (
     <DndContext
@@ -146,6 +190,21 @@ export default function Playground() {
         <header className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-white">MusicBlocks</h1>
           <div className="flex items-center gap-4">
+            {/* Mode Toggle */}
+            <div className="flex items-center gap-2 bg-slate-800 rounded-lg px-3 py-2">
+              <span className="text-xs text-slate-400 font-medium">Mode:</span>
+              <button
+                onClick={toggleMode}
+                className={`
+                  px-4 py-1.5 rounded-md text-sm font-semibold transition-all
+                  ${mode === "edit"
+                    ? "bg-purple-600 text-white shadow-lg"
+                    : "bg-slate-700 text-slate-300 hover:bg-slate-600"}
+                `}
+              >
+                {mode === "edit" ? "✏️ Edit" : "👤 Usage"}
+              </button>
+            </div>
             <ScanButton />
             <TransportControls />
           </div>
@@ -153,7 +212,25 @@ export default function Playground() {
 
         {/* Melody Section */}
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-slate-300 mb-3">🎵 Melody</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-slate-300">🎵 Melody</h2>
+            {mode === "edit" && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIsLibraryOpen(true)}
+                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold text-sm transition-all"
+                >
+                  📚 Manage Library
+                </button>
+                <button
+                  onClick={() => setIsEditorOpen(true)}
+                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold text-sm hover:shadow-lg transition-all hover:scale-105"
+                >
+                  + Create Custom Block
+                </button>
+              </div>
+            )}
+          </div>
           <div className="flex gap-4">
             <BlockPalette />
             <Timeline />
@@ -195,6 +272,13 @@ export default function Playground() {
             style={{
               width: `${draggedDefinition.ticks * TICK_WIDTH}px`,
               backgroundColor: draggedDefinition.color,
+              ...(dragOverlayPixelArt && {
+                backgroundImage: `url(${dragOverlayPixelArt})`,
+                backgroundSize: 'contain',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                imageRendering: 'pixelated',
+              }),
             }}
             className={`rounded-lg flex items-center justify-center
               font-semibold shadow-2xl opacity-90
@@ -202,10 +286,32 @@ export default function Playground() {
             initial={{ scale: 1.05 }}
             animate={{ scale: 1.05 }}
           >
-            {draggedDefinition.name}
+            {!((draggedDefinition as CustomBlock).hideLabel) && (
+              <span
+                style={{
+                  textShadow: dragOverlayPixelArt ? '0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3)' : undefined,
+                }}
+              >
+                {draggedDefinition.name}
+              </span>
+            )}
           </motion.div>
         )}
       </DragOverlay>
+
+      {/* Block Editor Modal */}
+      <BlockEditorModal
+        isOpen={isEditorOpen}
+        onClose={handleCloseEditor}
+        editingBlock={editingBlock}
+      />
+
+      {/* Block Library Modal */}
+      <BlockLibraryModal
+        isOpen={isLibraryOpen}
+        onClose={() => setIsLibraryOpen(false)}
+        onEditBlock={handleEditBlock}
+      />
     </DndContext>
   );
 }

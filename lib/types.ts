@@ -44,9 +44,27 @@ export interface BlockDefinition {
   pattern: NoteEvent[]; // Audio pattern
 }
 
+// Pixel art representation for custom blocks
+export interface PixelArtData {
+  size: 8 | 16 | 24 | 32; // Canvas size in pixels
+  pixels: string[][] | string; // 2D array of color strings or base64 encoded string
+}
+
+// Custom block created by teachers via Block Editor
+export interface CustomBlock {
+  blockId: string; // Unique custom block ID
+  name: string; // Teacher-defined name
+  category: "melody"; // MVP: melody only
+  ticks: number; // Duration: 2-16 ticks (auto-calculated from pattern, max 4 measures)
+  color: string; // Hex color for block background
+  pattern: NoteEvent[]; // Musical pattern
+  pixelArt: PixelArtData; // Visual representation
+  hideLabel?: boolean; // Optional: hide text label, show only pixel art
+}
+
 export interface SequenceBlock {
   instanceId: string; // Unique instance ID (uuid)
-  blockId: string; // Reference to BLOCK_LIBRARY
+  blockId: string; // Reference to BLOCK_LIBRARY or custom block ID
 }
 
 export interface SequenceStore {
