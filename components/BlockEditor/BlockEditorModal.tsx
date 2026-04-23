@@ -29,6 +29,9 @@ export default function BlockEditorModal({
   const [ticks, setTicks] = useState(editingBlock?.ticks || 4);
   const [pattern, setPattern] = useState<NoteEvent[]>(editingBlock?.pattern || []);
   const [hideLabel, setHideLabel] = useState((editingBlock as any)?.hideLabel || false);
+
+  // Grid display size (always 32 for max workspace) - separate from actual block duration
+  const gridTicks = 32;
   const [pixelArt, setPixelArt] = useState<string[][]>(
     editingBlock?.pixelArt
       ? typeof editingBlock.pixelArt.pixels === "string"
@@ -74,8 +77,9 @@ export default function BlockEditorModal({
       ...pattern.map((note) => note.time + note.duration)
     );
 
-    // Round up to nearest tick, with min 2 and max 16 (4 measures)
-    const calculatedTicks = Math.min(16, Math.max(2, Math.ceil(maxEndTime)));
+    // Round up to nearest tick, with min 2 and max 32
+    // This is the ACTUAL block duration, not the grid display size
+    const calculatedTicks = Math.min(32, Math.max(2, Math.ceil(maxEndTime)));
     setTicks(calculatedTicks);
   }, [pattern]);
 
@@ -232,7 +236,7 @@ export default function BlockEditorModal({
                 Melody Pattern
               </label>
               <MelodyEditor
-                ticks={ticks}
+                ticks={gridTicks}
                 pattern={pattern}
                 onChange={setPattern}
               />

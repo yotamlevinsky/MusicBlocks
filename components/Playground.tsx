@@ -47,11 +47,20 @@ export default function Playground() {
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [editingBlock, setEditingBlock] = useState<CustomBlock | undefined>(undefined);
 
+  // Collapsible sections state
+  const [isMelodyCollapsed, setIsMelodyCollapsed] = useState(false);
+  const [isHarmonyCollapsed, setIsHarmonyCollapsed] = useState(false);
+  const [isBeatCollapsed, setIsBeatCollapsed] = useState(false);
+
+  // Track if component is mounted (to prevent hydration errors)
+  const [isMounted, setIsMounted] = useState(false);
+
   const dndContextId = useId();
 
   // Initialize workspace on mount
   useEffect(() => {
     initializeWorkspace();
+    setIsMounted(true);
   }, [initializeWorkspace]);
 
   const handleEditBlock = (block: CustomBlock) => {
@@ -213,7 +222,17 @@ export default function Playground() {
         {/* Melody Section */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-slate-300">🎵 Melody</h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsMelodyCollapsed(!isMelodyCollapsed)}
+                className="w-8 h-8 flex items-center justify-center bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold text-lg transition-all"
+                title={isMelodyCollapsed ? "Expand Melody" : "Collapse Melody"}
+                suppressHydrationWarning
+              >
+                {isMounted ? (isMelodyCollapsed ? "+" : "−") : "−"}
+              </button>
+              <h2 className="text-lg font-semibold text-slate-300">🎵 Melody</h2>
+            </div>
             {mode === "edit" && (
               <div className="flex gap-2">
                 <button
@@ -231,28 +250,54 @@ export default function Playground() {
               </div>
             )}
           </div>
-          <div className="flex gap-4">
-            <BlockPalette />
-            <Timeline />
-          </div>
+          {!isMelodyCollapsed && (
+            <div className="flex gap-4">
+              <BlockPalette />
+              <Timeline />
+            </div>
+          )}
         </div>
 
         {/* Harmony Section */}
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-slate-300 mb-3">🎹 Harmony</h2>
-          <div className="flex gap-4">
-            <HarmonyPalette />
-            <HarmonyTimeline />
+          <div className="flex items-center gap-2 mb-3">
+            <button
+              onClick={() => setIsHarmonyCollapsed(!isHarmonyCollapsed)}
+              className="w-8 h-8 flex items-center justify-center bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold text-lg transition-all"
+              title={isHarmonyCollapsed ? "Expand Harmony" : "Collapse Harmony"}
+              suppressHydrationWarning
+            >
+              {isMounted ? (isHarmonyCollapsed ? "+" : "−") : "−"}
+            </button>
+            <h2 className="text-lg font-semibold text-slate-300">🎹 Harmony</h2>
           </div>
+          {!isHarmonyCollapsed && (
+            <div className="flex gap-4">
+              <HarmonyPalette />
+              <HarmonyTimeline />
+            </div>
+          )}
         </div>
 
         {/* Beat Section */}
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-slate-300 mb-3">🥁 Beats</h2>
-          <div className="flex gap-4">
-            <BeatPalette />
-            <BeatTimeline />
+          <div className="flex items-center gap-2 mb-3">
+            <button
+              onClick={() => setIsBeatCollapsed(!isBeatCollapsed)}
+              className="w-8 h-8 flex items-center justify-center bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold text-lg transition-all"
+              title={isBeatCollapsed ? "Expand Beats" : "Collapse Beats"}
+              suppressHydrationWarning
+            >
+              {isMounted ? (isBeatCollapsed ? "+" : "−") : "−"}
+            </button>
+            <h2 className="text-lg font-semibold text-slate-300">🥁 Beats</h2>
           </div>
+          {!isBeatCollapsed && (
+            <div className="flex gap-4">
+              <BeatPalette />
+              <BeatTimeline />
+            </div>
+          )}
         </div>
 
         {/* Instructions */}

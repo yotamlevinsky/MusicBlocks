@@ -8,7 +8,7 @@ import { useCustomBlockStore } from "@/lib/stores/useCustomBlockStore";
 import { useWorkspaceStore } from "@/lib/stores/useWorkspaceStore";
 import { useAppModeStore } from "@/lib/stores/useAppModeStore";
 import { renderPixelArtToDataURL } from "@/lib/pixelArt";
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 
 interface DraggablePaletteBlockProps {
   definition: BlockDefinition | CustomBlock;
@@ -88,15 +88,30 @@ function DraggablePaletteBlock({ definition }: DraggablePaletteBlockProps) {
 }
 
 export default function BlockPalette() {
+  const [isMounted, setIsMounted] = useState(false);
   const blocks = getAllBlocks();
   const customBlocks = useCustomBlockStore((state) => state.customBlocks);
   const { activeBlockIds, isInWorkspace } = useWorkspaceStore();
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Combine preset blocks and custom blocks
   const allBlocks = [...blocks, ...customBlocks];
 
   // Filter to only show blocks in workspace
   const workspaceBlocks = allBlocks.filter((block) => isInWorkspace(block.blockId));
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!isMounted) {
+    return (
+      <div className="bg-slate-800 rounded-xl p-4 w-fit">
+        <h2 className="text-slate-400 text-sm font-medium mb-3">Block Palette</h2>
+        <div className="flex flex-col gap-3 h-32" />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-slate-800 rounded-xl p-4 w-fit">
